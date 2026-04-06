@@ -109,14 +109,14 @@ hr { border: none; border-top: 1px solid #d4cfe8; margin: 1.5rem 0; }
 """, unsafe_allow_html=True)
 
 st.title("Entropic Writing Workshop")
-st.caption("token-level surprisal, entropy and S₂ using GPT-2 and Claude")
+st.caption("token-level surprisal, entropy and S₂ using DistilGPT-2 and Claude")
 
 # ── Model loading ──────────────────────────────────────────────────────────────
 
 @st.cache_resource
 def load_model():
-    tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-    model = GPT2LMHeadModel.from_pretrained("gpt2")
+    tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
+    model = GPT2LMHeadModel.from_pretrained("distilgpt2")
     model.eval()
     return model, tokenizer
 
