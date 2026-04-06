@@ -108,7 +108,12 @@ hr { border: none; border-top: 1px solid #d4cfe8; margin: 1.5rem 0; }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("Entropic Writing Workshop")
+st.markdown("""
+<style>
+h1 a.anchor-link { display: none; }
+</style>
+# [Entropic Writing Workshop](https://stevie.art/entropic-writing-lab/)
+""", unsafe_allow_html=True)
 st.caption("token-level surprisal, entropy and S₂ using DistilGPT-2 and Claude")
 
 # ── Model loading ──────────────────────────────────────────────────────────────
