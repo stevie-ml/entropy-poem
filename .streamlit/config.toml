@@ -1,6 +1,9 @@
 [server]
 enableCORS = false
 enableXsrfProtection = false
+headless = true
 
 [browser]
 gatherUsageStats = false
+serverAddress = "entropy-poem.onrender.com"
+serverPort = 443
