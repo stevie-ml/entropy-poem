@@ -103,6 +103,11 @@ h2, h3 { font-weight: 400; letter-spacing: -0.01em; color: #1e1b3a; }
 footer { visibility: hidden; }
 .stDeployButton { display: none; }
 
+/* Reduce top padding */
+.block-container { padding-top: 1.5rem !important; padding-bottom: 1rem !important; }
+header[data-testid="stHeader"] { height: 0; min-height: 0; }
+h1 a.anchor-link { display: none; }
+
 /* Horizontal rule */
 hr { border: none; border-top: 1px solid #d4cfe8; margin: 1.5rem 0; }
 </style>
@@ -338,7 +343,7 @@ DEFAULT_TEXT = "Let be be finale of seem.\nThe only emperor is the emperor of ic
 if "shared_text" not in st.session_state:
     st.session_state.shared_text = DEFAULT_TEXT
 
-shared_text = st.text_area("Text", height=110, label_visibility="collapsed", key="shared_text")
+shared_text = st.text_area("Text", height=200, label_visibility="collapsed", key="shared_text")
 
 tab1, tab2, tab3 = st.tabs(["Analyze", "Next token", "Generate"])
 
