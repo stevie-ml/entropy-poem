@@ -122,8 +122,10 @@ def load_model():
 
 @st.cache_resource
 def load_word_list():
-    with open("/usr/share/dict/words") as f:
-        return set(w.strip().lower() for w in f if w.strip().isalpha())
+    import nltk
+    nltk.download("words", quiet=True)
+    from nltk.corpus import words as nltk_words
+    return set(w.lower() for w in nltk_words.words())
 
 model, tokenizer = load_model()
 word_list = load_word_list()
