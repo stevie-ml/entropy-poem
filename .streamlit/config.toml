@@ -5,5 +5,5 @@ headless = true
 
 [browser]
 gatherUsageStats = false
-serverAddress = "entropy-poem.onrender.com"
+serverAddress = "s2lab.stevie.art"
 serverPort = 443
