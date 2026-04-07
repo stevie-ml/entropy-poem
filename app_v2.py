@@ -4,7 +4,6 @@ import math
 import pandas as pd
 import os
 import json
-import time
 import anthropic
 import plotly.graph_objects as go
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
@@ -136,48 +135,21 @@ st.caption("token-level surprisal, entropy and S₂ using DistilGPT-2 and Claude
 
 # ── Model loading ──────────────────────────────────────────────────────────────
 
-# Start loading in background immediately
-import threading
-_model_ready = threading.Event()
-_model_container = {}
-
-def _bg_load():
-    try:
-        import nltk
-        nltk.download("words", quiet=True)
-        from nltk.corpus import words as nltk_words
-        _model_container["word_list"] = set(w.lower() for w in nltk_words.words())
-        tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
-        model = GPT2LMHeadModel.from_pretrained("distilgpt2")
-        model.eval()
-        _model_container["model"] = model
-        _model_container["tokenizer"] = tokenizer
-    except BaseException as e:
-        _model_container["error"] = f"{type(e).__name__}: {e}"
-    finally:
-        _model_ready.set()
-
-if "model_thread_started" not in st.session_state:
-    st.session_state.model_thread_started = True
-    threading.Thread(target=_bg_load, daemon=True).start()
-
-def wait_for_model():
-    if not _model_ready.is_set():
-        st.info("⏳ Loading model… (~30s on first visit). Checking again in 3 seconds.")
-        time.sleep(3)
-        st.rerun()
-    if "error" in _model_container:
-        st.error(f"Model failed to load: {_model_container['error']}")
-        st.stop()
-    if "model" not in _model_container:
-        st.error("Model load timed out. Please refresh and try again.")
-        st.stop()
+@st.cache_resource(show_spinner=False)
+def load_resources():
+    import nltk
+    from nltk.corpus import words as nltk_words
+    nltk.download("words", quiet=True)
+    word_list = set(w.lower() for w in nltk_words.words())
+    tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
+    model = GPT2LMHeadModel.from_pretrained("distilgpt2")
+    model.eval()
+    return model, tokenizer, word_list
 
 # ── Core analysis ──────────────────────────────────────────────────────────────
 
 def analyze_text(text):
-    tokenizer = _model_container["tokenizer"]
-    model = _model_container["model"]
+    model, tokenizer, _ = load_resources()
     inputs = tokenizer(text, return_tensors="pt")
     input_ids = inputs.input_ids
     if input_ids.shape[1] < 2:
@@ -287,9 +259,7 @@ def metric_chart(tokens):
 # ── Next token ─────────────────────────────────────────────────────────────────
 
 def get_next_token_candidates(context):
-    tokenizer = _model_container["tokenizer"]
-    model = _model_container["model"]
-    word_list = _model_container["word_list"]
+    model, tokenizer, word_list = load_resources()
     inputs = tokenizer(context, return_tensors="pt")
     with torch.no_grad():
         probs = torch.softmax(model(inputs.input_ids).logits[0, -1], dim=-1).cpu().numpy()
@@ -324,8 +294,7 @@ GPT2_TOOL = {
 }
 
 def score_words_gpt2(context, words):
-    tokenizer = _model_container["tokenizer"]
-    model = _model_container["model"]
+    model, tokenizer, _ = load_resources()
     inputs = tokenizer(context, return_tensors="pt")
     with torch.no_grad():
         probs = torch.softmax(model(inputs.input_ids).logits[0, -1], dim=-1).cpu()
@@ -410,11 +379,7 @@ with tab1:
     metric_sel = st.radio("Color by", ["surprisal", "entropy", "s2"], horizontal=True)
 
     if st.button("Analyze"):
-        st.session_state.pending_action = "analyze"
-    if st.session_state.get("pending_action") == "analyze":
-        wait_for_model()
-        st.session_state.pending_action = None
-        with st.spinner(""):
+        with st.spinner("Analyzing…"):
             tokens = analyze_text(shared_text)
         if tokens:
             st.markdown(render_colored_tokens(tokens, metric_sel), unsafe_allow_html=True)
@@ -433,11 +398,7 @@ with tab1:
 # ── Tab 2: Next token ──────────────────────────────────────────────────────────
 with tab2:
     if st.button("Score distribution"):
-        st.session_state.pending_action = "score"
-    if st.session_state.get("pending_action") == "score":
-        wait_for_model()
-        st.session_state.pending_action = None
-        with st.spinner(""):
+        with st.spinner("Scoring…"):
             all_candidates = get_next_token_candidates(shared_text)
         df_all = pd.DataFrame(all_candidates)
         st.caption(f"{len(df_all)} dictionary words scored · sorted by surprisal")
@@ -462,10 +423,6 @@ with tab3:
     notes = st.text_input("Notes", "")
 
     if st.button("Generate"):
-        st.session_state.pending_action = "generate"
-    if st.session_state.get("pending_action") == "generate":
-        wait_for_model()
-        st.session_state.pending_action = None
         full_prompt = user_prompt + (f"\n{notes}" if notes else "")
         status_box = st.empty()
         log_lines = []
