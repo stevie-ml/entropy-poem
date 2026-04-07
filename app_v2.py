@@ -20,7 +20,7 @@ st.markdown("""
 html, body, [class*="css"] {
     font-family: 'EB Garamond', Georgia, serif;
     color: #1e1b3a;
-    background: #f0eef8;
+    background: #fdf8f0;
 }
 
 /* Title */
@@ -69,7 +69,7 @@ h2, h3 { font-weight: 400; letter-spacing: -0.01em; color: #1e1b3a; }
     font-size: 1rem;
     border: 1px solid #d4cfe8;
     border-radius: 4px;
-    background: #f7f6fc;
+    background: #faf6ef;
     color: #1e1b3a;
 }
 
@@ -272,8 +272,8 @@ def metric_chart(tokens):
             orientation="h", yanchor="bottom", y=1.02,
             font=dict(size=11, family="EB Garamond, Georgia, serif"),
         ),
-        plot_bgcolor="#f0eef8",
-        paper_bgcolor="#f0eef8",
+        plot_bgcolor="#fdf8f0",
+        paper_bgcolor="#fdf8f0",
         font=dict(color="#1e1b3a", family="EB Garamond, Georgia, serif"),
     )
     return fig
