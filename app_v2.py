@@ -117,18 +117,33 @@ st.markdown("""
 <style>
 h1 a.anchor-link { display: none; }
 </style>
-# [Entropic Writing Workshop](https://stevie.art/entropic-writing-lab/)
+# [Entropic Writing Workshop](https://s2lab.stevie.art)
 """, unsafe_allow_html=True)
 st.caption("token-level surprisal, entropy and S₂ using DistilGPT-2 and Claude")
 
 # ── Model loading ──────────────────────────────────────────────────────────────
 
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def load_model():
     tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
     model = GPT2LMHeadModel.from_pretrained("distilgpt2")
     model.eval()
     return model, tokenizer
+
+# Start loading in background immediately
+import threading
+_model_ready = threading.Event()
+_model_container = {}
+
+def _bg_load():
+    m, t = load_model()
+    _model_container["model"] = m
+    _model_container["tokenizer"] = t
+    _model_ready.set()
+
+if "model_thread_started" not in st.session_state:
+    st.session_state.model_thread_started = True
+    threading.Thread(target=_bg_load, daemon=True).start()
 
 @st.cache_resource
 def load_word_list():
@@ -137,7 +152,11 @@ def load_word_list():
     from nltk.corpus import words as nltk_words
     return set(w.lower() for w in nltk_words.words())
 
-model, tokenizer = load_model()
+if not _model_ready.is_set():
+    with st.spinner("Loading model… (first load only)"):
+        _model_ready.wait()
+model = _model_container["model"]
+tokenizer = _model_container["tokenizer"]
 word_list = load_word_list()
 
 # ── Core analysis ──────────────────────────────────────────────────────────────
