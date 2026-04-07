@@ -116,8 +116,20 @@ hr { border: none; border-top: 1px solid #d4cfe8; margin: 1.5rem 0; }
 st.markdown("""
 <style>
 h1 a.anchor-link { display: none; }
+.title-wrap { display: inline-flex; align-items: center; gap: 0.4rem; }
+.title-wrap h1 { margin: 0; }
+.copy-btn {
+    opacity: 0; font-size: 0.9rem; cursor: pointer;
+    color: #9b8ec4; transition: opacity 0.15s;
+    background: none; border: none; padding: 0; line-height: 1;
+}
+.title-wrap:hover .copy-btn { opacity: 1; }
+.copy-btn:hover { color: #7c5cbf; }
 </style>
-# [Entropic Writing Workshop](https://s2lab.stevie.art)
+<div class="title-wrap">
+  <h1>Entropic Writing Workshop</h1>
+  <button class="copy-btn" title="Copy link" onclick="navigator.clipboard.writeText('https://s2lab.stevie.art/').then(() => { this.textContent='✓'; setTimeout(() => this.textContent='⇗', 1000); })">⇗</button>
+</div>
 """, unsafe_allow_html=True)
 st.caption("token-level surprisal, entropy and S₂ using DistilGPT-2 and Claude")
 
