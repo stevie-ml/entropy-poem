@@ -152,8 +152,8 @@ def _bg_load():
         model.eval()
         _model_container["model"] = model
         _model_container["tokenizer"] = tokenizer
-    except Exception as e:
-        _model_container["error"] = str(e)
+    except BaseException as e:
+        _model_container["error"] = f"{type(e).__name__}: {e}"
     finally:
         _model_ready.set()
 
