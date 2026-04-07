@@ -136,6 +136,10 @@ _model_ready = threading.Event()
 _model_container = {}
 
 def _bg_load():
+    import nltk
+    nltk.download("words", quiet=True)
+    from nltk.corpus import words as nltk_words
+    _model_container["word_list"] = set(w.lower() for w in nltk_words.words())
     m, t = load_model()
     _model_container["model"] = m
     _model_container["tokenizer"] = t
@@ -145,23 +149,17 @@ if "model_thread_started" not in st.session_state:
     st.session_state.model_thread_started = True
     threading.Thread(target=_bg_load, daemon=True).start()
 
-@st.cache_resource
-def load_word_list():
-    import nltk
-    nltk.download("words", quiet=True)
-    from nltk.corpus import words as nltk_words
-    return set(w.lower() for w in nltk_words.words())
-
-if not _model_ready.is_set():
-    with st.spinner("Loading model… (first load only)"):
-        _model_ready.wait()
-model = _model_container["model"]
-tokenizer = _model_container["tokenizer"]
-word_list = load_word_list()
+def wait_for_model():
+    if not _model_ready.is_set():
+        with st.spinner("Loading model… (first request only)"):
+            _model_ready.wait()
+    return _model_container["model"], _model_container["tokenizer"], _model_container["word_list"]
 
 # ── Core analysis ──────────────────────────────────────────────────────────────
 
 def analyze_text(text):
+    tokenizer = _model_container["tokenizer"]
+    model = _model_container["model"]
     inputs = tokenizer(text, return_tensors="pt")
     input_ids = inputs.input_ids
     if input_ids.shape[1] < 2:
@@ -271,6 +269,9 @@ def metric_chart(tokens):
 # ── Next token ─────────────────────────────────────────────────────────────────
 
 def get_next_token_candidates(context):
+    tokenizer = _model_container["tokenizer"]
+    model = _model_container["model"]
+    word_list = _model_container["word_list"]
     inputs = tokenizer(context, return_tensors="pt")
     with torch.no_grad():
         probs = torch.softmax(model(inputs.input_ids).logits[0, -1], dim=-1).cpu().numpy()
@@ -305,6 +306,8 @@ GPT2_TOOL = {
 }
 
 def score_words_gpt2(context, words):
+    tokenizer = _model_container["tokenizer"]
+    model = _model_container["model"]
     inputs = tokenizer(context, return_tensors="pt")
     with torch.no_grad():
         probs = torch.softmax(model(inputs.input_ids).logits[0, -1], dim=-1).cpu()
@@ -389,6 +392,7 @@ with tab1:
     metric_sel = st.radio("Color by", ["surprisal", "entropy", "s2"], horizontal=True)
 
     if st.button("Analyze"):
+        wait_for_model()
         with st.spinner(""):
             tokens = analyze_text(shared_text)
         if tokens:
@@ -408,6 +412,7 @@ with tab1:
 # ── Tab 2: Next token ──────────────────────────────────────────────────────────
 with tab2:
     if st.button("Score distribution"):
+        wait_for_model()
         with st.spinner(""):
             all_candidates = get_next_token_candidates(shared_text)
         df_all = pd.DataFrame(all_candidates)
@@ -433,6 +438,7 @@ with tab3:
     notes = st.text_input("Notes", "")
 
     if st.button("Generate"):
+        wait_for_model()
         full_prompt = user_prompt + (f"\n{notes}" if notes else "")
         status_box = st.empty()
         log_lines = []
