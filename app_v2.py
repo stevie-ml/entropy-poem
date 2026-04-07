@@ -141,16 +141,20 @@ _model_ready = threading.Event()
 _model_container = {}
 
 def _bg_load():
-    import nltk
-    nltk.download("words", quiet=True)
-    from nltk.corpus import words as nltk_words
-    _model_container["word_list"] = set(w.lower() for w in nltk_words.words())
-    tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
-    model = GPT2LMHeadModel.from_pretrained("distilgpt2")
-    model.eval()
-    _model_container["model"] = model
-    _model_container["tokenizer"] = tokenizer
-    _model_ready.set()
+    try:
+        import nltk
+        nltk.download("words", quiet=True)
+        from nltk.corpus import words as nltk_words
+        _model_container["word_list"] = set(w.lower() for w in nltk_words.words())
+        tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
+        model = GPT2LMHeadModel.from_pretrained("distilgpt2")
+        model.eval()
+        _model_container["model"] = model
+        _model_container["tokenizer"] = tokenizer
+    except Exception as e:
+        _model_container["error"] = str(e)
+    finally:
+        _model_ready.set()
 
 if "model_thread_started" not in st.session_state:
     st.session_state.model_thread_started = True
@@ -159,7 +163,13 @@ if "model_thread_started" not in st.session_state:
 def wait_for_model():
     if not _model_ready.is_set():
         with st.spinner("Loading model… (first request only)"):
-            _model_ready.wait()
+            _model_ready.wait(timeout=120)
+    if "error" in _model_container:
+        st.error(f"Model failed to load: {_model_container['error']}")
+        st.stop()
+    if "model" not in _model_container:
+        st.error("Model load timed out. Please refresh and try again.")
+        st.stop()
     return _model_container["model"], _model_container["tokenizer"], _model_container["word_list"]
 
 # ── Core analysis ──────────────────────────────────────────────────────────────
