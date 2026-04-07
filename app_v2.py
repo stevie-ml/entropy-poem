@@ -135,13 +135,6 @@ st.caption("token-level surprisal, entropy and S₂ using DistilGPT-2 and Claude
 
 # ── Model loading ──────────────────────────────────────────────────────────────
 
-@st.cache_resource(show_spinner=False)
-def load_model():
-    tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
-    model = GPT2LMHeadModel.from_pretrained("distilgpt2")
-    model.eval()
-    return model, tokenizer
-
 # Start loading in background immediately
 import threading
 _model_ready = threading.Event()
@@ -152,9 +145,11 @@ def _bg_load():
     nltk.download("words", quiet=True)
     from nltk.corpus import words as nltk_words
     _model_container["word_list"] = set(w.lower() for w in nltk_words.words())
-    m, t = load_model()
-    _model_container["model"] = m
-    _model_container["tokenizer"] = t
+    tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
+    model = GPT2LMHeadModel.from_pretrained("distilgpt2")
+    model.eval()
+    _model_container["model"] = model
+    _model_container["tokenizer"] = tokenizer
     _model_ready.set()
 
 if "model_thread_started" not in st.session_state:
