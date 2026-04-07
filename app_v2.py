@@ -4,6 +4,7 @@ import math
 import pandas as pd
 import os
 import json
+import time
 import anthropic
 import plotly.graph_objects as go
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
@@ -162,15 +163,15 @@ if "model_thread_started" not in st.session_state:
 
 def wait_for_model():
     if not _model_ready.is_set():
-        with st.spinner("Loading model… (first request only)"):
-            _model_ready.wait(timeout=120)
+        st.info("⏳ Loading model… (~30s on first visit). Checking again in 3 seconds.")
+        time.sleep(3)
+        st.rerun()
     if "error" in _model_container:
         st.error(f"Model failed to load: {_model_container['error']}")
         st.stop()
     if "model" not in _model_container:
         st.error("Model load timed out. Please refresh and try again.")
         st.stop()
-    return _model_container["model"], _model_container["tokenizer"], _model_container["word_list"]
 
 # ── Core analysis ──────────────────────────────────────────────────────────────
 
@@ -409,7 +410,10 @@ with tab1:
     metric_sel = st.radio("Color by", ["surprisal", "entropy", "s2"], horizontal=True)
 
     if st.button("Analyze"):
+        st.session_state.pending_action = "analyze"
+    if st.session_state.get("pending_action") == "analyze":
         wait_for_model()
+        st.session_state.pending_action = None
         with st.spinner(""):
             tokens = analyze_text(shared_text)
         if tokens:
@@ -429,7 +433,10 @@ with tab1:
 # ── Tab 2: Next token ──────────────────────────────────────────────────────────
 with tab2:
     if st.button("Score distribution"):
+        st.session_state.pending_action = "score"
+    if st.session_state.get("pending_action") == "score":
         wait_for_model()
+        st.session_state.pending_action = None
         with st.spinner(""):
             all_candidates = get_next_token_candidates(shared_text)
         df_all = pd.DataFrame(all_candidates)
@@ -455,7 +462,10 @@ with tab3:
     notes = st.text_input("Notes", "")
 
     if st.button("Generate"):
+        st.session_state.pending_action = "generate"
+    if st.session_state.get("pending_action") == "generate":
         wait_for_model()
+        st.session_state.pending_action = None
         full_prompt = user_prompt + (f"\n{notes}" if notes else "")
         status_box = st.empty()
         log_lines = []
