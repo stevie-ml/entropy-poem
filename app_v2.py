@@ -423,6 +423,9 @@ with tab3:
     notes = st.text_input("Notes", "")
 
     if st.button("Generate"):
+        if not user_prompt.strip():
+            st.warning("Enter a prompt first.")
+            st.stop()
         full_prompt = user_prompt + (f"\n{notes}" if notes else "")
         status_box = st.empty()
         log_lines = []
