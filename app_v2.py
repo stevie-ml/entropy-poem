@@ -10,7 +10,7 @@ from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
 claude = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
-st.set_page_config(page_title="Entropic Writing Workshop", layout="wide")
+st.set_page_config(page_title="Entropic Writing Workshop", layout="wide", page_icon="favicon.png")
 
 # ── Typography & style ─────────────────────────────────────────────────────────
 st.markdown("""
