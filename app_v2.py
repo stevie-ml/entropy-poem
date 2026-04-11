@@ -371,7 +371,7 @@ How uncertain was the model *before* seeing the token? DeDeo: *"H(X) goes by a n
 
 **S₂** = surprisal − entropy
 
-Was this token more surprising than the situation warranted? Positive S₂: harder to predict than the general uncertainty would suggest. Negative S₂: easier than expected. Follows from the definitions of self-information and entropy in Cover & Thomas, [*Elements of Information Theory*](https://www.wiley.com/en-us/Elements+of+Information+Theory%2C+2nd+Edition-p-9780471241959) (2006).
+Was this token more surprising than the situation warranted? Positive S₂: harder to predict than the general uncertainty would suggest. Negative S₂: easier than expected. See [*Detecting out of distribution text with surprisal and entropy*](https://www.lesswrong.com/posts/Kjo64rSWkFfc3sre5/detecting-out-of-distribution-text-with-surprisal-and) (LessWrong).
 """
 
 # ── Tab 1: Analyze ─────────────────────────────────────────────────────────────
