@@ -436,11 +436,16 @@ with tab3:
         def upd(msg):
             log_lines.append(msg)
             status_box.caption("\n".join(log_lines[-4:]))
-        with st.spinner(""):
-            result, n_calls = claude_generate(sys_prompt, full_prompt, status_fn=upd)
-        status_box.empty()
-        st.caption(f"{n_calls} GPT-2 oracle calls")
-        st.code(result)
+        try:
+            with st.spinner(""):
+                result, n_calls = claude_generate(sys_prompt, full_prompt, status_fn=upd)
+            status_box.empty()
+            st.caption(f"{n_calls} GPT-2 oracle calls")
+            st.code(result)
+        except Exception as e:
+            status_box.empty()
+            st.error(f"Generation failed: {e}")
+            st.stop()
 
         if result:
             st.markdown("---")
