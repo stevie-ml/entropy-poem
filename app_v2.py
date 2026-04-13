@@ -295,7 +295,11 @@ GPT2_TOOL = {
 
 def score_words_gpt2(context, words):
     model, tokenizer, _ = load_resources()
+    if not context.strip():
+        return [{"word": w, "surprisal_bits": None, "note": "empty context"} for w in words]
     inputs = tokenizer(context, return_tensors="pt")
+    if inputs.input_ids.shape[1] == 0:
+        return [{"word": w, "surprisal_bits": None, "note": "empty context"} for w in words]
     with torch.no_grad():
         probs = torch.softmax(model(inputs.input_ids).logits[0, -1], dim=-1).cpu()
     results = []
