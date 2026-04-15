@@ -6,7 +6,7 @@ import os
 import json
 import anthropic
 import plotly.graph_objects as go
-from transformers import GPT2LMHeadModel, GPT2Tokenizer
+from transformers import GPT2LMHeadModel, GPT2Tokenizer, AutoModelForCausalLM, AutoTokenizer
 
 claude = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
@@ -133,23 +133,41 @@ h1 a.anchor-link { display: none; }
 """, unsafe_allow_html=True)
 st.caption("token-level surprisal, entropy and S₂ using DistilGPT-2 and Claude")
 
+# ── Language selector ──────────────────────────────────────────────────────────
+
+lang_label = st.sidebar.radio("Language", ["English", "Deutsch"])
+language = "de" if lang_label == "Deutsch" else "en"
+
+DEFAULT_TEXTS = {
+    "en": "Let be be finale of seem.\nThe only emperor is the emperor of ice-cream.",
+    "de": "Komm in den totgesagten park und schau:\nDer schimmer ferner lächelnder gestade",
+}
+DEFAULT_CAPTIONS = {
+    "en": "Wallace Stevens, *The Emperor of Ice-Cream* (1922)",
+    "de": "Stefan George, *Komm in den totgesagten park* (1891)",
+}
+
 # ── Model loading ──────────────────────────────────────────────────────────────
 
 @st.cache_resource(show_spinner=False)
-def load_resources():
+def load_resources(lang="en"):
     import nltk
     from nltk.corpus import words as nltk_words
     nltk.download("words", quiet=True)
     word_list = set(w.lower() for w in nltk_words.words())
-    tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
-    model = GPT2LMHeadModel.from_pretrained("distilgpt2")
+    if lang == "de":
+        tokenizer = AutoTokenizer.from_pretrained("dbmdz/german-gpt2")
+        model = AutoModelForCausalLM.from_pretrained("dbmdz/german-gpt2")
+    else:
+        tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
+        model = GPT2LMHeadModel.from_pretrained("distilgpt2")
     model.eval()
     return model, tokenizer, word_list
 
 # ── Core analysis ──────────────────────────────────────────────────────────────
 
-def analyze_text(text):
-    model, tokenizer, _ = load_resources()
+def analyze_text(text, lang="en"):
+    model, tokenizer, _ = load_resources(lang)
     inputs = tokenizer(text, return_tensors="pt")
     input_ids = inputs.input_ids
     if input_ids.shape[1] < 2:
@@ -258,8 +276,8 @@ def metric_chart(tokens):
 
 # ── Next token ─────────────────────────────────────────────────────────────────
 
-def get_next_token_candidates(context):
-    model, tokenizer, word_list = load_resources()
+def get_next_token_candidates(context, lang="en"):
+    model, tokenizer, word_list = load_resources(lang)
     inputs = tokenizer(context, return_tensors="pt")
     with torch.no_grad():
         probs = torch.softmax(model(inputs.input_ids).logits[0, -1], dim=-1).cpu().numpy()
@@ -267,10 +285,14 @@ def get_next_token_candidates(context):
     for idx in range(len(probs)):
         tok = tokenizer.decode([idx])
         word = tok.strip().lower()
-        if tok.startswith(" ") and word.isalpha() and len(word) > 2 and word in word_list:
-            p = probs[idx]
-            if p > 1e-12:
-                results.append({"word": word, "surprisal": round(-math.log2(p), 2), "prob_%": round(p * 100, 5)})
+        if not (tok.startswith(" ") and word.isalpha() and len(word) > 2):
+            continue
+        # English uses an NLTK dictionary; German has no word list so accept all
+        if lang == "en" and word not in word_list:
+            continue
+        p = probs[idx]
+        if p > 1e-12:
+            results.append({"word": word, "surprisal": round(-math.log2(p), 2), "prob_%": round(p * 100, 5)})
     results.sort(key=lambda x: x["surprisal"])
     return results
 
@@ -293,8 +315,8 @@ GPT2_TOOL = {
     },
 }
 
-def score_words_gpt2(context, words):
-    model, tokenizer, _ = load_resources()
+def score_words_gpt2(context, words, lang="en"):
+    model, tokenizer, _ = load_resources(lang)
     if not context.strip():
         return [{"word": w, "surprisal_bits": None, "note": "empty context"} for w in words]
     inputs = tokenizer(context, return_tensors="pt")
@@ -316,7 +338,7 @@ def score_words_gpt2(context, words):
             results.append({"word": word, "surprisal_bits": None, "note": "multi-token"})
     return results
 
-def claude_generate(system, prompt, status_fn=None):
+def claude_generate(system, prompt, lang="en", status_fn=None):
     oracle_system = system + (
         "\n\nIMPORTANT: At every word position use get_token_surprisals. "
         "Propose 6-8 diverse candidates, get their surprisal scores, then pick the "
@@ -337,7 +359,7 @@ def claude_generate(system, prompt, status_fn=None):
             for block in resp.content:
                 if block.type == "tool_use" and block.name == "get_token_surprisals":
                     tool_calls += 1
-                    result = score_words_gpt2(block.input["context"], block.input["words"])
+                    result = score_words_gpt2(block.input["context"], block.input["words"], lang=lang)
                     if status_fn:
                         status_fn(f"call {tool_calls}: scored {len(result)} candidates · …{block.input['context'][-35:]!r}")
                     tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": json.dumps(result)})
@@ -351,12 +373,18 @@ def claude_generate(system, prompt, status_fn=None):
 
 # ── UI ─────────────────────────────────────────────────────────────────────────
 
-DEFAULT_TEXT = "Let be be finale of seem.\nThe only emperor is the emperor of ice-cream."
+default_text = DEFAULT_TEXTS[language]
+
+# Reset shared text when language changes
+if st.session_state.get("_last_language") != language:
+    st.session_state["_last_language"] = language
+    st.session_state["shared_text"] = default_text
 
 if "shared_text" not in st.session_state:
-    st.session_state.shared_text = DEFAULT_TEXT
+    st.session_state.shared_text = default_text
 
 shared_text = st.text_area("Text", height=200, label_visibility="collapsed", key="shared_text")
+st.caption(DEFAULT_CAPTIONS[language])
 
 tab1, tab2, tab3 = st.tabs(["Analyze", "Next token", "Generate"])
 
@@ -384,7 +412,7 @@ with tab1:
 
     if st.button("Analyze"):
         with st.spinner("Analyzing…"):
-            tokens = analyze_text(shared_text)
+            tokens = analyze_text(shared_text, lang=language)
         if tokens:
             st.markdown(render_colored_tokens(tokens, metric_sel), unsafe_allow_html=True)
             st.plotly_chart(metric_chart(tokens), use_container_width=True)
@@ -403,7 +431,7 @@ with tab1:
 with tab2:
     if st.button("Score distribution"):
         with st.spinner("Scoring…"):
-            all_candidates = get_next_token_candidates(shared_text)
+            all_candidates = get_next_token_candidates(shared_text, lang=language)
         df_all = pd.DataFrame(all_candidates)
         st.caption(f"{len(df_all)} dictionary words scored · sorted by surprisal")
         c1, c2 = st.columns(2)
@@ -438,7 +466,7 @@ with tab3:
             status_box.caption("\n".join(log_lines[-4:]))
         try:
             with st.spinner(""):
-                result, n_calls = claude_generate(sys_prompt, full_prompt, status_fn=upd)
+                result, n_calls = claude_generate(sys_prompt, full_prompt, lang=language, status_fn=upd)
             status_box.empty()
             st.caption(f"{n_calls} GPT-2 oracle calls")
             st.code(result)
@@ -450,7 +478,7 @@ with tab3:
         if result:
             st.markdown("---")
             with st.spinner(""):
-                tokens = analyze_text(result)
+                tokens = analyze_text(result, lang=language)
             if tokens:
                 st.markdown(render_colored_tokens(tokens, "surprisal"), unsafe_allow_html=True)
                 st.plotly_chart(metric_chart(tokens), use_container_width=True)
