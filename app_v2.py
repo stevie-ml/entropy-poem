@@ -149,7 +149,7 @@ language = "de" if use_german else "en"
 
 DEFAULT_TEXTS = {
     "en": "Let be be finale of seem.\nThe only emperor is the emperor of ice-cream.",
-    "de": "Komm in den totgesagten park und schau:\nDer schimmer ferner lächelnder gestade",
+    "de": "Jemand mußte Josef K. verleumdet haben",
 }
 DEFAULT_CAPTIONS = {
     "en": "Wallace Stevens, *The Emperor of Ice-Cream* (1922)",
