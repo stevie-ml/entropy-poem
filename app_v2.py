@@ -131,21 +131,21 @@ h1 a.anchor-link { display: none; }
   <button class="copy-btn" title="Copy link" onclick="navigator.clipboard.writeText('https://s2lab.stevie.art/').then(() => { this.textContent='✓'; setTimeout(() => this.textContent='⇗', 1000); })">⇗</button>
 </div>
 """, unsafe_allow_html=True)
-_cap_col, _lang_col = st.columns([9, 1])
+_cap_col, _lang_col = st.columns([8, 2])
 with _cap_col:
     st.caption("token-level surprisal, entropy and S₂ using DistilGPT-2 and Claude")
 with _lang_col:
     st.markdown("""
 <style>
-/* shrink the toggle container to a tiny label */
-div[data-testid="stToggle"] { margin-top: -4px; }
-div[data-testid="stToggle"] label p { font-size: 0.7rem !important; color: #9b8ec4; letter-spacing: 0.04em; }
+div[data-testid="stRadio"] { margin-top: -2px; }
+div[data-testid="stRadio"] > div { gap: 0.4rem; flex-wrap: nowrap; }
+div[data-testid="stRadio"] label p { font-size: 0.72rem !important; color: #9b8ec4; letter-spacing: 0.04em; }
 </style>""", unsafe_allow_html=True)
-    use_german = st.toggle("DE", value=False, label_visibility="visible")
+    lang_choice = st.radio("", ["EN", "DE"], horizontal=True, label_visibility="collapsed")
 
 # ── Language selector ──────────────────────────────────────────────────────────
 
-language = "de" if use_german else "en"
+language = "de" if lang_choice == "DE" else "en"
 
 DEFAULT_TEXTS = {
     "en": "Let be be finale of seem.\nThe only emperor is the emperor of ice-cream.",
