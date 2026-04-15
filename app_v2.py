@@ -385,7 +385,6 @@ if "shared_text" not in st.session_state:
     st.session_state.shared_text = default_text
 
 shared_text = st.text_area("Text", height=200, label_visibility="collapsed", key="shared_text")
-st.caption(DEFAULT_CAPTIONS[language])
 
 tab1, tab2, tab3 = st.tabs(["Analyze", "Next token", "Generate"])
 
