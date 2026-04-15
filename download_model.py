@@ -3,11 +3,11 @@ import nltk
 print("Downloading NLTK words corpus...")
 nltk.download("words")
 
-from transformers import GPT2Tokenizer, GPT2LMHeadModel, AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM
 print("Downloading distilgpt2 tokenizer...")
-GPT2Tokenizer.from_pretrained("distilgpt2")
+AutoTokenizer.from_pretrained("distilgpt2")
 print("Downloading distilgpt2 model...")
-GPT2LMHeadModel.from_pretrained("distilgpt2")
+AutoModelForCausalLM.from_pretrained("distilgpt2")
 
 print("Downloading dbmdz/german-gpt2 tokenizer...")
 AutoTokenizer.from_pretrained("dbmdz/german-gpt2")

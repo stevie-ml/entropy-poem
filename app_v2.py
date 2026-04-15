@@ -6,7 +6,7 @@ import os
 import json
 import anthropic
 import plotly.graph_objects as go
-from transformers import GPT2LMHeadModel, GPT2Tokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
 claude = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
@@ -165,12 +165,11 @@ def load_resources(lang="en"):
     nltk.download("words", quiet=True)
     word_list = set(w.lower() for w in nltk_words.words())
     if lang == "de":
-        from transformers import AutoModelForCausalLM, AutoTokenizer
         tokenizer = AutoTokenizer.from_pretrained("dbmdz/german-gpt2")
         model = AutoModelForCausalLM.from_pretrained("dbmdz/german-gpt2")
     else:
-        tokenizer = GPT2Tokenizer.from_pretrained("distilgpt2")
-        model = GPT2LMHeadModel.from_pretrained("distilgpt2")
+        tokenizer = AutoTokenizer.from_pretrained("distilgpt2")
+        model = AutoModelForCausalLM.from_pretrained("distilgpt2")
     model.eval()
     return model, tokenizer, word_list
 
