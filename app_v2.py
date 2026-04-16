@@ -399,13 +399,13 @@ tab1, tab2, tab3 = st.tabs(["Analyze", "Next token", "Generate"])
 EXPLAINER = """
 **Surprisal** = −log₂ P(token | context)
 
-How unexpected was this specific token? DeDeo: *"the number of questions to get to choice x is equal to −log₂ P(x) — the less likely possibilities are buried deeper in the question tree."* High surprisal = the model had to dig deep. ([DeDeo, *Information Theory for Intelligent People*, 2017](http://santafe.edu/~simon/it.pdf))
+How unexpected was this specific token? DeDeo: *"the number of questions to get to choice x is equal to −log₂ P(x) — the less likely possibilities are buried deeper in the question tree."* High surprisal indicates the model had to dig deep. ([DeDeo, *Information Theory for Intelligent People*, 2017](http://santafe.edu/~simon/it.pdf))
 
 ---
 
 **Entropy** = −Σ P(w) log₂ P(w) over all possible next tokens
 
-How uncertain was the model *before* seeing the token? DeDeo: *"H(X) goes by a number of different names: 'uncertainty', 'information', even 'entropy'... how uncertain we are about the outcome, how much information is in the process."* High entropy = many continuations were plausible. ([DeDeo, 2017](http://santafe.edu/~simon/it.pdf))
+How uncertain was the model *before* seeing the token? DeDeo: *"H(X) goes by a number of different names: 'uncertainty', 'information', even 'entropy'... how uncertain we are about the outcome, how much information is in the process."* High entropy indicates many continuations were plausible. ([DeDeo, 2017](http://santafe.edu/~simon/it.pdf))
 
 ---
 
