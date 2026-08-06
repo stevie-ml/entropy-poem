@@ -4,8 +4,11 @@ import math
 import pandas as pd
 import os
 import json
+import time
+import threading
 import anthropic
 import plotly.graph_objects as go
+from collections import deque, defaultdict
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 claude = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
@@ -305,6 +308,62 @@ def get_next_token_candidates(context, lang="en"):
     results.sort(key=lambda x: x["surprisal"])
     return results
 
+# ── Spend limits ───────────────────────────────────────────────────────────────
+# Generate drives an agentic loop against a paid API key on a public app, so the
+# ceiling lives here rather than with the caller. A normal run is ~50 rounds.
+
+MAX_ROUNDS = 120
+RUNS_PER_HOUR_GLOBAL = 12
+RUNS_PER_DAY_GLOBAL = 50
+RUNS_PER_HOUR_CLIENT = 3
+
+@st.cache_resource
+def _run_log():
+    """Process-wide, shared across sessions and reruns."""
+    return {"lock": threading.Lock(), "all": deque(), "by_client": defaultdict(deque)}
+
+def _prune(stamps, now, window):
+    while stamps and now - stamps[0] > window:
+        stamps.popleft()
+
+def _client_id():
+    # Render terminates TLS upstream, so the caller is the first X-Forwarded-For hop.
+    # Unavailable headers collapse every caller into one bucket, which fails closed.
+    try:
+        forwarded = st.context.headers.get("X-Forwarded-For", "")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+    except Exception:
+        pass
+    return "unknown"
+
+def claim_run_slot():
+    """Reserve capacity for one generation. Returns None if allowed, else why not."""
+    now = time.monotonic()
+    client = _client_id()
+    log = _run_log()
+    with log["lock"]:
+        _prune(log["all"], now, 86400)
+        mine = log["by_client"][client]
+        _prune(mine, now, 3600)
+
+        if len(mine) >= RUNS_PER_HOUR_CLIENT:
+            return f"You've run {RUNS_PER_HOUR_CLIENT} generations in the past hour. Try again later."
+        if sum(1 for t in log["all"] if now - t <= 3600) >= RUNS_PER_HOUR_GLOBAL:
+            return "This demo is at its hourly limit. Try again later."
+        if len(log["all"]) >= RUNS_PER_DAY_GLOBAL:
+            return "This demo is at its daily limit. Try again tomorrow."
+
+        log["all"].append(now)
+        mine.append(now)
+
+        if len(log["by_client"]) > 2000:
+            for key, stamps in list(log["by_client"].items()):
+                _prune(stamps, now, 3600)
+                if not stamps:
+                    del log["by_client"][key]
+        return None
+
 # ── GPT-2 oracle ───────────────────────────────────────────────────────────────
 
 GPT2_TOOL = {
@@ -355,7 +414,11 @@ def claude_generate(system, prompt, lang="en", status_fn=None):
     )
     messages = [{"role": "user", "content": prompt}]
     tool_calls = 0
+    rounds = 0
     while True:
+        rounds += 1
+        if rounds > MAX_ROUNDS:
+            raise RuntimeError(f"Stopped after {MAX_ROUNDS} model rounds without a finished poem.")
         resp = claude.messages.create(
             model="claude-opus-4-6",
             max_tokens=8000,
@@ -465,6 +528,10 @@ with tab3:
     if st.button("Generate"):
         if not user_prompt.strip():
             st.warning("Enter a prompt first.")
+            st.stop()
+        limited = claim_run_slot()
+        if limited:
+            st.warning(limited)
             st.stop()
         full_prompt = user_prompt + (f"\n{notes}" if notes else "")
         status_box = st.empty()
