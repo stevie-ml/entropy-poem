@@ -11,9 +11,16 @@ import plotly.graph_objects as go
 from collections import deque, defaultdict
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+import analytics
+
 claude = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
 st.set_page_config(page_title="Entropic Writing Workshop", layout="wide", page_icon="favicon.png")
+
+# Usage dashboard at ?stats=<S2LAB_ANALYTICS_TOKEN>. Returns early so the stats
+# page never pays for model loading.
+if analytics.render_dashboard():
+    st.stop()
 
 # ── Typography & style ─────────────────────────────────────────────────────────
 st.markdown("""
@@ -149,6 +156,8 @@ div[data-testid="stRadio"] label p { font-size: 0.72rem !important; color: #9b8e
 # ── Language selector ──────────────────────────────────────────────────────────
 
 language = "de" if lang_choice == "DE" else "en"
+
+analytics.track_session(language)
 
 DEFAULT_TEXTS = {
     "en": "Let be be finale of seem.\nThe only emperor is the emperor of ice-cream.",
@@ -482,6 +491,7 @@ with tab1:
     metric_sel = st.radio("Color by", ["surprisal", "entropy", "s2"], horizontal=True)
 
     if st.button("Analyze"):
+        analytics.track_event("analyze", metric_sel)
         with st.spinner("Analyzing…"):
             tokens = analyze_text(shared_text, lang=language)
         if tokens:
@@ -501,6 +511,7 @@ with tab1:
 # ── Tab 2: Next token ──────────────────────────────────────────────────────────
 with tab2:
     if st.button("Score distribution"):
+        analytics.track_event("next_token")
         with st.spinner("Scoring…"):
             all_candidates = get_next_token_candidates(shared_text, lang=language)
         df_all = pd.DataFrame(all_candidates)
@@ -531,8 +542,10 @@ with tab3:
             st.stop()
         limited = claim_run_slot()
         if limited:
+            analytics.track_event("generate_rate_limited")
             st.warning(limited)
             st.stop()
+        analytics.track_event("generate")
         full_prompt = user_prompt + (f"\n{notes}" if notes else "")
         status_box = st.empty()
         log_lines = []
