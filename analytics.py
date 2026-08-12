@@ -237,7 +237,8 @@ def render_dashboard():
     if s["by_day"]:
         df = pd.DataFrame(s["by_day"], columns=["day", "sessions", "visitors"])
         st.subheader("Per day")
-        st.line_chart(df.set_index("day").sort_index())
+        # Bar rather than line: a single day of data draws no line at all.
+        st.bar_chart(df.set_index("day").sort_index())
         st.dataframe(df, width="stretch", hide_index=True)
     else:
         st.info("No sessions recorded yet in this window.")
